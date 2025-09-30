@@ -1,0 +1,15 @@
+{
+  "include": [
+    "main.py"
+  ],
+  "reportAny": "none",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportMissingTypeArgument": "error",
+  "reportMissingParameterType": "warning",
+  "reportReturnType": "error",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict"
+}
