@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>指数数据监控面板</title>
+    <style>
+      /* ========== CSS变量 ========== */
+      :root {
+        --color-primary: #667eea;
+        --color-primary-dark: #764ba2;
+        --color-bg-high: #fee2e2;
+        --color-bg-low: #dcfce7;
+        --color-bg-light: #f8fafc;
+        --color-bg-lighter: #fafbfc;
+        --color-text-primary: #1e293b;
+        --color-text-secondary: #475569;
+        --color-text-muted: #64748b;
+        --color-border: #e2e8f0;
+        --color-border-light: #f1f5f9;
+        --color-accent: #3b82f6;
+        --color-error: #dc2626;
+        --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+      }
+
+      /* ========== 基础样式 ========== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: var(--gradient-primary);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      /* ========== 头部样式 ========== */
+      .header {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        font-weight: 600;
+      }
+
+      .header-info {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .info-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        backdrop-filter: blur(10px);
+      }
+
+      /* ========== 统计卡片 ========== */
+      .stats-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 15px;
+        padding: 20px;
+        background: var(--color-bg-light);
+        border-bottom: 1px solid var(--color-border);
+        overflow-x: auto;
+      }
+
+      .stat-card {
+        flex: 1;
+        min-width: 0;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      /* 统计卡片高亮动画 */
+      .stat-card.highlight-stat {
+        animation: highlightStat 1.5s ease-in-out;
+      }
+
+      @keyframes highlightStat {
+        0% {
+          background-color: #dbeafe;
+          transform: scale(1.05);
+        }
+        50% {
+          background-color: #bfdbfe;
+        }
+        100% {
+          background-color: white;
+          transform: scale(1);
+        }
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: var(--color-text-muted);
+        margin-bottom: 5px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--color-text-primary);
+      }
+
+      /* ========== 表格样式 ========== */
+      .table-container {
+        overflow-x: auto;
+        padding: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      thead {
+        background: var(--color-bg-light);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      th {
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        border-bottom: 2px solid var(--color-border);
+        white-space: nowrap;
+        font-size: 12px;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+      }
+
+      th:hover {
+        background-color: var(--color-border);
+      }
+
+      th.sortable::after {
+        content: ' ⇅';
+        opacity: 0.3;
+        font-size: 10px;
+      }
+
+      th.sort-asc::after {
+        content: ' ▲';
+        opacity: 1;
+        color: var(--color-accent);
+      }
+
+      th.sort-desc::after {
+        content: ' ▼';
+        opacity: 1;
+        color: var(--color-accent);
+      }
+
+      td {
+        padding: 12px 8px;
+        text-align: center;
+        border-bottom: 1px solid var(--color-border-light);
+        transition: background-color 0.3s;
+      }
+
+      tbody tr:hover {
+        background-color: var(--color-bg-light);
+      }
+
+      tbody tr:nth-child(even) {
+        background-color: var(--color-bg-lighter);
+      }
+
+      /* ========== 状态样式(合并重复样式) ========== */
+      .signal-high,
+      .boolean-true,
+      .percent-high,
+      .score-high {
+        background-color: var(--color-bg-high) !important;
+        color: #000;
+        font-weight: 600;
+      }
+
+      .signal-low,
+      .boolean-false,
+      .percent-low,
+      .score-low {
+        background-color: var(--color-bg-low) !important;
+        color: #000;
+        font-weight: 600;
+      }
+
+      .percent-value {
+        font-weight: 600;
+      }
+
+      /* ========== 消息状态 ========== */
+      .loading,
+      .error,
+      .no-data {
+        text-align: center;
+        padding: 40px;
+      }
+
+      .loading,
+      .no-data {
+        color: var(--color-text-muted);
+      }
+
+      .error {
+        color: var(--color-error);
+      }
+
+      .no-data {
+        padding: 60px;
+        font-size: 16px;
+      }
+
+      /* ========== 动画效果 ========== */
+      .highlight-new {
+        animation: highlightNew 2s ease-in-out;
+      }
+
+      .highlight-updated {
+        animation: highlightUpdated 1.2s ease-in-out;
+      }
+
+      @keyframes highlightNew {
+        0% {
+          background-color: #86efac;
+          transform: scale(1.02);
+          box-shadow: 0 0 20px rgba(134, 239, 172, 0.6);
+        }
+        50% {
+          background-color: #bbf7d0;
+        }
+        100% {
+          background-color: transparent;
+          transform: scale(1);
+          box-shadow: none;
+        }
+      }
+
+      @keyframes highlightUpdated {
+        0% {
+          background-color: #93c5fd;
+          transform: scale(1.01);
+        }
+        50% {
+          background-color: #bfdbfe;
+        }
+        100% {
+          background-color: transparent;
+          transform: scale(1);
+        }
+      }
+
+      /* ========== 工具类 ========== */
+      .code-cell {
+        font-weight: 600;
+        color: var(--color-accent);
+      }
+
+      .time-cell {
+        font-size: 11px;
+        color: var(--color-text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📊 指数数据监控面板</h1>
+        <div class="header-info">
+          <div class="info-badge">
+            <span class="network-status online" id="networkStatus"></span>
+            <span id="lastUpdate">加载中...</span>
+          </div>
+          <div class="info-badge">数据条数: <span id="dataCount">0</span></div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <!-- 统计信息将在这里动态生成 -->
+      </div>
+
+      <div class="table-container">
+        <div id="loadingDiv" class="loading">正在加载数据...</div>
+        <div id="errorDiv" class="error" style="display: none"></div>
+        <table id="dataTable" style="display: none">
+          <thead>
+            <tr>
+              <th class="sortable" data-column="updateTime" data-type="string">更新时间</th>
+              <th class="sortable" data-column="etfCode" data-type="string">代码</th>
+              <th class="sortable" data-column="etfName" data-type="string">名称</th>
+              <th class="sortable" data-column="totalScore" data-type="number">总分</th>
+              <th class="sortable" data-column="m5Signal" data-type="string">M5信号</th>
+              <th class="sortable" data-column="greaterThanM5Price" data-type="boolean">5日</th>
+              <th class="sortable" data-column="greaterThanM10Price" data-type="boolean">10日</th>
+              <th class="sortable" data-column="greaterThanM20Price" data-type="boolean">20日</th>
+              <th class="sortable" data-column="m0Percent" data-type="percent">M0占比</th>
+              <th class="sortable" data-column="m5Percent" data-type="percent">M5占比</th>
+              <th class="sortable" data-column="m10Percent" data-type="percent">M10占比</th>
+              <th class="sortable" data-column="m20Percent" data-type="percent">M20占比</th>
+              <th class="sortable" data-column="maMeanRatio" data-type="percent">Ma均值</th>
+              <th class="sortable" data-column="growthStockCount" data-type="number">增长股数</th>
+              <th class="sortable" data-column="totalStockCount" data-type="number">总股数</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div id="noDataDiv" class="no-data" style="display: none">暂无数据</div>
+      </div>
+    </div>
+
+    <script>
+      let previousData = [];
+      let lastUpdateTime = null;
+      let isFirstLoad = true;
+      let networkStatus = 'online';
+      let sortColumn = null;  // 当前排序列
+      let sortDirection = 'asc';  // 排序方向: 'asc' 或 'desc'
+
+      // 更新网络状态
+      function updateNetworkStatus(status) {
+        networkStatus = status;
+        const statusElement = document.getElementById('networkStatus');
+        statusElement.className = `network-status ${status}`;
+      }
+
+      // 格式化百分比
+      function formatPercent(value) {
+        if (value === null || value === undefined) {
+          return "-";
+        }
+        return (value * 100).toFixed(2) + "%";
+      }
+
+      // 获取百分比样式类
+      function getPercentClass(value) {
+        if (value === null || value === undefined) return "";
+        if (value >= 0.5) return "percent-high";
+        return "percent-low";
+      }
+
+      // 格式化布尔值
+      function formatBoolean(value) {
+        if (value === null || value === undefined) {
+          return "-";
+        }
+        return value ? "true" : "false";
+      }
+
+      // 获取布尔值样式类
+      function getBooleanClass(value) {
+        if (value === null || value === undefined) return "";
+        return value ? "boolean-true" : "boolean-false";
+      }
+
+      // 获取M5信号样式类
+      function getSignalClass(signal) {
+        if (!signal) return "";
+        return signal === "多" ? "signal-high" : "signal-low";
+      }
+
+      // 格式化时间（截取前19个字符）
+      function formatTime(timeStr) {
+        if (!timeStr) return "-";
+        return timeStr.substring(0, 19);
+      }
+
+      // 排序数据
+      function sortData(data, column, direction, dataType) {
+        return [...data].sort((a, b) => {
+          let aVal = a[column];
+          let bVal = b[column];
+
+          // 处理 null/undefined
+          if (aVal === null || aVal === undefined) aVal = dataType === 'number' || dataType === 'percent' ? -Infinity : '';
+          if (bVal === null || bVal === undefined) bVal = dataType === 'number' || dataType === 'percent' ? -Infinity : '';
+
+          // 根据数据类型比较
+          let comparison = 0;
+          if (dataType === 'number' || dataType === 'percent') {
+            comparison = aVal - bVal;
+          } else if (dataType === 'boolean') {
+            comparison = (aVal === bVal) ? 0 : aVal ? 1 : -1;
+          } else {
+            comparison = String(aVal).localeCompare(String(bVal));
+          }
+
+          return direction === 'asc' ? comparison : -comparison;
+        });
+      }
+
+      // 默认排序：按预定义名称列表排序
+      function applyDefaultSort(data) {
+        // 预定义的排序列表
+        const sortOrder = [
+          '科创50ETF', '人工智能AIETF', '云计算50ETF', '5G通信ETF', '半导体ETF', '芯片ETF',
+          '游戏ETF', '影视ETF', '传媒ETF', '机器人ETF', '博睿数据', '润和软件', '昆仑万维',
+          '巨人网络', '三七互娱', '神州泰岳', '海康威视', '浙文互联', '中际旭创', '新易盛',
+          '中科曙光', '澜起科技', '金山办公', '寒武纪-U', '紫光股份', '科大讯飞', '汇川技术',
+          '机器人', '大华股份', '中控技术', '石头科技', '北方华创', '中芯国际', '深圳华强',
+          '中微公司', '海光信息', '豪威集团', '立讯精密', '中兴通讯', '工业富联', '捷成股份',
+          '光线传媒', '芒果超媒', '东方明珠', '完美世界', '万达电影', '分众传媒', '利欧股份',
+          '恺英网络', '蓝色光标', '高新发展', '每日互动', '电池ETF', '光伏ETF', '新能源车ETF',
+          '碳中和ETF', '天齐锂业', '亿纬锂能', '赣锋锂业', '宁德时代', '比亚迪', '宏发股份',
+          '法拉电子', '天赐材料', '中矿资源', '国轩高科', '阳光电源', '隆基绿能', 'TCL科技',
+          '特变电工', '通威股份', '晶科能源', '正泰电器', '长江电力', '中国核电', '国投电力',
+          '爱旭股份', '金风科技', '锦浪科技', '三花智控', '华友钴业', '格林美', '中概互联网ETF',
+          '恒生科技ETF', '恒生互联网ETF', '恒生ETF', '酒ETF', '贵州茅台', '五 粮 液',
+          '泸州老窖', '医疗ETF', '中药ETF', '药明康德', '恒瑞医药', '券商ETF', '稀土ETF',
+          '银行ETF', '煤炭ETF', '创业板ETF', '上证50ETF', '沪深300ETF', '中证500ETF'
+        ];
+
+        // 创建名称到索引的映射
+        const orderMap = new Map();
+        sortOrder.forEach((name, index) => {
+          orderMap.set(name, index);
+        });
+
+        return [...data].sort((a, b) => {
+          const aName = a.etfName || a.stockName || '';
+          const bName = b.etfName || b.stockName || '';
+
+          const aIndex = orderMap.has(aName) ? orderMap.get(aName) : Number.MAX_SAFE_INTEGER;
+          const bIndex = orderMap.has(bName) ? orderMap.get(bName) : Number.MAX_SAFE_INTEGER;
+
+          // 如果两个都在列表中，按列表顺序排序
+          if (aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+
+          // 如果都不在列表中，按名称字母顺序排序
+          return aName.localeCompare(bName, 'zh-CN');
+        });
+      }
+
+      // 检查数据变更类型
+      function getDataChangeType(code, newData) {
+        const oldData = previousData.find((d) => d.etfCode === code);
+
+        // 如果是第一次加载，不显示动画
+        if (isFirstLoad) return null;
+
+        // 新数据
+        if (!oldData) return 'new';
+
+        // 排除用户要求移除的字段，确保比较逻辑保持简洁
+        const strippedNewData = { ...newData };
+        delete strippedNewData.holdStatus;
+        delete strippedNewData.greaterThanM0Price;
+
+        const strippedOldData = { ...oldData };
+        delete strippedOldData.holdStatus;
+        delete strippedOldData.greaterThanM0Price;
+
+        // 数据有更新
+        if (JSON.stringify(strippedOldData) !== JSON.stringify(strippedNewData)) {
+          return 'updated';
+        }
+
+        return null;
+      }
+
+      // 更新表头排序指示器
+      function updateSortIndicators() {
+        document.querySelectorAll('th.sortable').forEach(th => {
+          th.classList.remove('sort-asc', 'sort-desc');
+          if (th.dataset.column === sortColumn) {
+            th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+          }
+        });
+      }
+
+      // 处理列点击排序
+      function handleColumnClick(column, dataType) {
+        if (sortColumn === column) {
+          // 同一列：切换排序方向
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          // 新列：默认升序
+          sortColumn = column;
+          sortDirection = 'asc';
+        }
+
+        updateSortIndicators();
+
+        // 重新渲染表格
+        renderTable(previousData);
+      }
+
+
+
+      // 存储上一次的统计数据用于对比
+      let previousStats = null;
+
+      // 更新统计信息
+      function updateStats(data) {
+        const statsGrid = document.getElementById("statsGrid");
+
+        // 过滤出不为空的数据
+        const m5Data = data.filter((d) => d.m5Percent !== null && d.m5Percent !== undefined);
+        const m10Data = data.filter((d) => d.m10Percent !== null && d.m10Percent !== undefined);
+        const m20Data = data.filter((d) => d.m20Percent !== null && d.m20Percent !== undefined);
+
+        // 计算各项均值
+        const avgM5Percent = m5Data.length > 0
+            ? ((m5Data.reduce((sum, d) => sum + d.m5Percent, 0) / m5Data.length) * 100).toFixed(2)
+            : 0;
+
+        const avgM10Percent = m10Data.length > 0
+            ? ((m10Data.reduce((sum, d) => sum + d.m10Percent, 0) / m10Data.length) * 100).toFixed(2)
+            : 0;
+
+        const avgM20Percent = m20Data.length > 0
+            ? ((m20Data.reduce((sum, d) => sum + d.m20Percent, 0) / m20Data.length) * 100).toFixed(2)
+            : 0;
+
+        // Ma均值占比 = (M5占比 + M10占比 + M20占比) / 3
+        const maAvg = ((parseFloat(avgM5Percent) + parseFloat(avgM10Percent) + parseFloat(avgM20Percent)) / 3).toFixed(2);
+
+        // M5信号 (M5占比大于50%显示多,否则显示空)
+        const m5Signal = parseFloat(avgM5Percent) > 50 ? "多" : "空";
+        const m5SignalClass = getSignalClass(m5Signal);
+
+        // 增长股数和总股数
+        const growthStockSum = data.reduce((sum, d) => sum + (d.growthStockCount || 0), 0);
+        const totalStockSum = data.reduce((sum, d) => sum + (d.totalStockCount || 0), 0);
+
+        // 当前统计数据
+        const currentStats = {
+          m5Signal,
+          avgM5Percent,
+          avgM10Percent,
+          avgM20Percent,
+          maAvg,
+          growthStockSum,
+          totalStockSum
+        };
+
+        // 检查哪些统计项发生了变化
+        const changedStats = new Set();
+        if (previousStats && !isFirstLoad) {
+          if (previousStats.m5Signal !== currentStats.m5Signal) changedStats.add('m5Signal');
+          if (previousStats.avgM5Percent !== currentStats.avgM5Percent) changedStats.add('avgM5Percent');
+          if (previousStats.avgM10Percent !== currentStats.avgM10Percent) changedStats.add('avgM10Percent');
+          if (previousStats.avgM20Percent !== currentStats.avgM20Percent) changedStats.add('avgM20Percent');
+          if (previousStats.maAvg !== currentStats.maAvg) changedStats.add('maAvg');
+          if (previousStats.growthStockSum !== currentStats.growthStockSum) changedStats.add('growthStockSum');
+          if (previousStats.totalStockSum !== currentStats.totalStockSum) changedStats.add('totalStockSum');
+        }
+
+        statsGrid.innerHTML = `
+                <div class="stat-card ${changedStats.has('m5Signal') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">M5信号</div>
+                    <div class="stat-value"><span style="padding: 3px 10px;border-radius: 8px;" class="${m5SignalClass}">${m5Signal}</span></div>
+                </div>
+                <div class="stat-card ${changedStats.has('avgM5Percent') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">M5占比</div>
+                    <div class="stat-value">${avgM5Percent}%</div>
+                </div>
+                <div class="stat-card ${changedStats.has('avgM10Percent') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">M10占比</div>
+                    <div class="stat-value">${avgM10Percent}%</div>
+                </div>
+                <div class="stat-card ${changedStats.has('avgM20Percent') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">M20占比</div>
+                    <div class="stat-value">${avgM20Percent}%</div>
+                </div>
+                <div class="stat-card ${changedStats.has('maAvg') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">Ma均值占比</div>
+                    <div class="stat-value">${maAvg}%</div>
+                </div>
+                <div class="stat-card ${changedStats.has('growthStockSum') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">增长股数</div>
+                    <div class="stat-value">${growthStockSum}</div>
+                </div>
+                <div class="stat-card ${changedStats.has('totalStockSum') ? 'highlight-stat' : ''}">
+                    <div class="stat-label">总股数</div>
+                    <div class="stat-value">${totalStockSum}</div>
+                </div>
+            `;
+
+        // 保存当前统计数据供下次对比
+        previousStats = currentStats;
+      }
+
+      // 渲染表格
+      function renderTable(data) {
+        const tableBody = document.getElementById("tableBody");
+        const loadingDiv = document.getElementById("loadingDiv");
+        const errorDiv = document.getElementById("errorDiv");
+        const table = document.getElementById("dataTable");
+        const noDataDiv = document.getElementById("noDataDiv");
+
+        // 保存当前滚动位置
+        const tableContainer = document.querySelector('.table-container');
+        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
+
+        loadingDiv.style.display = "none";
+        errorDiv.style.display = "none";
+
+        if (!data || data.length === 0) {
+          table.style.display = "none";
+          noDataDiv.style.display = "block";
+          return;
+        }
+
+        table.style.display = "table";
+        noDataDiv.style.display = "none";
+
+        // 应用排序
+        let sortedData;
+        if (sortColumn) {
+          // 用户指定了排序列
+          const th = document.querySelector(`th[data-column="${sortColumn}"]`);
+          const dataType = th ? th.dataset.type : 'string';
+          sortedData = sortData(data, sortColumn, sortDirection, dataType);
+        } else {
+          // 使用默认排序
+          sortedData = applyDefaultSort(data);
+        }
+
+        tableBody.innerHTML = sortedData
+          .map((item) => {
+            const changeType = getDataChangeType(item.etfCode, item);
+            const rowClass = changeType ? `highlight-${changeType}` : "";
+
+            // 获取总分数背景色类
+            const getScoreClass = (score) => {
+              if (score === null || score === undefined) return "";
+              return score > 3 ? "score-high" : "score-low";
+            };
+
+            return `
+                    <tr class="${rowClass}">
+                        <td class="time-cell">${formatTime(
+                          item.updateTime
+                        )}</td>
+                        <td class="code-cell">${item.etfCode || "-"}</td>
+                        <td>${item.etfName || "-"}</td>
+                        <td class="${getScoreClass(item.totalScore)}">${item.totalScore || "0"}</td>
+                        <td class="${getSignalClass(item.m5Signal)}">${item.m5Signal || "-"}</td>
+                        <td class="${getBooleanClass(
+                          item.greaterThanM5Price
+                        )}">${formatBoolean(item.greaterThanM5Price)}</td>
+                        <td class="${getBooleanClass(
+                          item.greaterThanM10Price
+                        )}">${formatBoolean(item.greaterThanM10Price)}</td>
+                        <td class="${getBooleanClass(
+                          item.greaterThanM20Price
+                        )}">${formatBoolean(item.greaterThanM20Price)}</td>
+                        <td class="percent-value ${getPercentClass(
+                          item.m0Percent
+                        )}">${formatPercent(item.m0Percent)}</td>
+                        <td class="percent-value ${getPercentClass(
+                          item.m5Percent
+                        )}">${formatPercent(item.m5Percent)}</td>
+                        <td class="percent-value ${getPercentClass(
+                          item.m10Percent
+                        )}">${formatPercent(item.m10Percent)}</td>
+                        <td class="percent-value ${getPercentClass(
+                          item.m20Percent
+                        )}">${formatPercent(item.m20Percent)}</td>
+                        <td class="percent-value ${getPercentClass(
+                          item.maMeanRatio
+                        )}">${formatPercent(item.maMeanRatio)}</td>
+                        <td>${item.growthStockCount || "-"}</td>
+                        <td>${item.totalStockCount || "-"}</td>
+                    </tr>
+                `;
+          })
+          .join("");
+
+        // 恢复滚动位置
+        if (scrollTop > 0 && tableContainer) {
+          // 使用 requestAnimationFrame 确保 DOM 已更新
+          requestAnimationFrame(() => {
+            tableContainer.scrollTop = scrollTop;
+          });
+        }
+
+        // 存入当前数据供下次对比
+        previousData = JSON.parse(JSON.stringify(data));
+      }
+
+      // 获取数据
+      async function fetchData() {
+        try {
+          // 静默刷新：移除 loading 状态提示
+
+          // 构建请求URL，支持增量查询
+          let url = "/allDataList";
+          if (!isFirstLoad && lastUpdateTime) {
+            url += `?since=${encodeURIComponent(lastUpdateTime)}`;
+          }
+
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP错误: ${response.status}`);
+          }
+
+          const data = await response.json();
+          // 静默刷新：移除 online 状态更新
+
+          // 如果是增量查询且有新数据，合并到现有数据中
+          if (!isFirstLoad && lastUpdateTime && data.length > 0) {
+            mergeIncrementalData(data);
+          } else if (isFirstLoad || !lastUpdateTime) {
+            // 首次加载或全量查询
+            previousData = JSON.parse(JSON.stringify(data));
+            isFirstLoad = false;
+          }
+
+          // 使用 previousData 作为当前数据（增量数据已合并）
+          const currentData = previousData;
+
+          // 获取数据中的最大时间（只有在有数据时才更新）
+          if (currentData.length > 0) {
+            const maxTime = currentData.reduce((max, item) => {
+              return item.updateTime > max ? item.updateTime : max;
+            }, "1970-01-01 00:00:00");
+
+            // 更新最后更新时间显示（截取前19个字符）
+            document.getElementById(
+              "lastUpdate"
+            ).textContent = `最后更新: ${maxTime.substring(0, 19)}`;
+
+            // 更新 lastUpdateTime 为数据中的最大时间，用于下次增量查询
+            lastUpdateTime = maxTime.substring(0, 19);
+          }
+
+          // 更新数据计数
+          document.getElementById("dataCount").textContent = currentData.length;
+
+          // 更新统计信息
+          updateStats(currentData);
+
+          // 渲染表格
+          renderTable(currentData);
+
+        } catch (error) {
+          console.error("获取数据失败:", error);
+          updateNetworkStatus('offline');
+          const errorDiv = document.getElementById("errorDiv");
+          errorDiv.textContent = `获取数据失败: ${error.message}`;
+          errorDiv.style.display = "block";
+          document.getElementById("loadingDiv").style.display = "none";
+          document.getElementById("dataTable").style.display = "none";
+        }
+      }
+
+      // 合并增量数据
+      function mergeIncrementalData(incrementalData) {
+        incrementalData.forEach(newItem => {
+          const existingIndex = previousData.findIndex(item => item.etfCode === newItem.etfCode);
+          if (existingIndex >= 0) {
+            // 更新现有数据
+            previousData[existingIndex] = newItem;
+          } else {
+            // 添加新数据
+            previousData.push(newItem);
+          }
+        });
+      }
+
+      // 初始化
+      document.addEventListener("DOMContentLoaded", () => {
+        // 添加表头点击事件
+        document.querySelectorAll('th.sortable').forEach(th => {
+          th.addEventListener('click', () => {
+            const column = th.dataset.column;
+            const dataType = th.dataset.type;
+            handleColumnClick(column, dataType);
+          });
+        });
+
+        // 立即获取一次数据（全量）
+        fetchData();
+
+        // 每3秒自动刷新（增量）
+        setInterval(fetchData, 3000);
+
+        // 每30秒强制全量刷新一次，确保数据同步
+        // setInterval(() => {
+        //   isFirstLoad = true;
+        //   lastUpdateTime = null;
+        //   fetchData();
+        // }, 30000);
+      });
+    </script>
+  </body>
+</html>

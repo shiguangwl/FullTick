@@ -2,18 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "服务端",
+            "name": "服务端Debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "data_view_service/main.py",
+            "program": "service/main.py",
             "console": "integratedTerminal"
         },
-        {
-            "name": "客户端",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "data_monitor_client/main.py",
-            "console": "integratedTerminal"
-        }
     ]
 }

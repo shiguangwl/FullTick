@@ -1,0 +1,66 @@
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+indent-width = 4
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".hg",
+    ".mypy_cache", ".nox", ".pants.d", ".ruff_cache",
+    ".svn", ".tox", ".venv", "__pypackages__", "_build",
+    "buck-out", "build", "dist", "node_modules", "venv",
+]
+
+[tool.ruff.lint]
+# 启用所有规则，注释掉了细分的规则组，方便后续按需开启
+select = [
+    "ALL"
+]
+
+# 智能忽略规则，提升开发体验和兼容性
+ignore = [
+    # 允许使用带有else的循环后的break,适用于 FastAPI/Typer
+    "B008",
+    # 异常类名称允许以 Error 结尾
+    "N818",
+    # 不强制模块、包和 __init__ 的文档字符串，先聚焦核心逻辑
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    # 避免 docstring 空行格式冲突，交由格式化工具处理
+    "D200", "D203", "D205", "D212",
+    # 其他 docstring 相关忽略
+    "D400", "D401", "D415",
+    # 行太长，格式化工具处理
+    "E501",
+    # 异常中的外部消息太冗长
+    "TRY003",
+    # 其他特定忽略
+    "TD002", "TD003", "FIX002",
+    "BLE001", "ERA001",
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+# 针对测试文件放宽部分规则，允许使用 print、空 assert 和忽略文档字符串
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T201", "B011", "D"]
+
+# 采用 Google 风格文档字符串
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+# mccabe 代码复杂度阈值
+max-complexity = 15
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

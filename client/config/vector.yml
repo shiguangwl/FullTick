@@ -1,0 +1,193 @@
+# """
+# 2025-10-11 11:14:26,619 [INFO] [0x00000d7c] reqid = 0C:\联储证券QMT南方实盘\python\加仓三线.py_15992090, output = A.trade_stock= 159920.SZ Etf_last_price =  1.622 m5 = 1.64 m20 = 1.624 m10 = 1.635 re_cal_postion= 1 C.current_position= 0.0
+#
+# """
+#
+# 抓取需要包含：
+# 类型：加仓三线
+# 买入ETF：159920
+# 最性价： 1.622
+# M5：    1.64
+# M10：   1.635
+# M20:    1.624
+#
+# =====================
+#
+# """
+# 2025-10-11 11:48:32,020 [INFO] [0x00000d7c] reqid = 0C:\联储证券QMT南方实盘\python\加仓M5股票.py_512690132, output = 计算仓位 = 0.41935483870967744 仓位结果 = 1 当前仓位 = 0.0 成分股涨数 = 13 总成分股数 = 31
+# order_volume =  1700 target_value =  991.0999999999999
+# 最新价 = 0.583  买入ETF = 512690.SH 名称 = 酒ETF 买入数量 = 1700 目标仓位 = 1
+# """
+#
+# """
+# 2025-10-11 11:50:48,131 [INFO] [0x00000d7c] reqid = 0C:\联储证券QMT南方实盘\python\加仓M5股票.py_513050147, output = index= 0 timetag[-8:] 15:00:00 timetag =  2025-10-10 timetag = 2025-10-10 15:00:00
+# full_tick =  1 {'513050.SH': {'time': 17600.....(忽略).....[0, 0, 0, 0, 0]}}
+# 计算仓位 = 0.0 仓位结果 = 1 当前仓位 = 0.0 成分股涨数 = 0 总成分股数 = 16
+# order_volume =  500 target_value =  843.5
+# 最新价 = 1.687  买入ETF = 513050.SH 名称 = 中概互联网ETF 买入数量 = 500 目标仓位 = 1
+# """
+#
+#
+# 抓取需要包含：
+# 类型：加仓M0股票 （可能为：M5/M10/M20/M0）
+# 买入ETF：512480
+# 计算仓位:0.16129032258064516
+# 成分股涨数:96
+# 总成分股数:105
+#
+# ===================
+# 抓取的数据通过 Http 发送到服务端,请求头 Secret-Key,Json 数据
+
+data_dir: "./vector-data"
+
+sources:
+  xtclient_logs:
+    type: file
+    max_line_bytes: 1048576
+    include:
+      - "C:/联储证券QMT南方实盘/userdata/log/XtClient_FormulaOutput_*.log"
+    read_from: end
+    # 使用 oldest_first: false 来优先读取最新的文件
+    oldest_first: false
+    fingerprint:
+      strategy: device_and_inode
+    multiline:
+      start_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      mode: halt_before
+      condition_pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'
+      timeout_ms: 1000
+
+transforms:
+  # 过滤包含关键信息的日志行
+  filter_logs:
+    type: filter
+    inputs: ["xtclient_logs"]
+    condition:
+      type: vrl
+      source: |
+        contains(string!(.message), "买入ETF") ||
+        contains(string!(.message), "trade_stock")
+
+  # 解析并提取数据
+  parse_data:
+    type: remap
+    inputs: ["filter_logs"]
+    source: |
+      parsed_time = parse_regex!(.message, r'(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})')
+      .timestamp = parsed_time.timestamp
+      message = string!(.message)
+
+      if contains(message, "trade_stock") && contains(message, "加仓三线") {
+        .log_type = "加仓三线"
+        if match(message, r'trade_stock=\s*(\d+\.\w+)') {
+          etf_match = parse_regex!(message, r'trade_stock=\s*(?P<etf>\d+\.\w+)')
+          .buy_etf = etf_match.etf
+        }
+        if match(message, r'Etf_last_price\s*=\s*([\d.]+)') {
+          price_match = parse_regex!(message, r'Etf_last_price\s*=\s*(?P<price>[\d.]+)')
+          .last_price = to_float!(price_match.price)
+        }
+        if match(message, r'm5\s*=\s*([\d.]+)') {
+          m5_match = parse_regex!(message, r'm5\s*=\s*(?P<m5>[\d.]+)')
+          .m5 = to_float!(m5_match.m5)
+        }
+        if match(message, r'm10\s*=\s*([\d.]+)') {
+          m10_match = parse_regex!(message, r'm10\s*=\s*(?P<m10>[\d.]+)')
+          .m10 = to_float!(m10_match.m10)
+        }
+        if match(message, r'm20\s*=\s*([\d.]+)') {
+          m20_match = parse_regex!(message, r'm20\s*=\s*(?P<m20>[\d.]+)')
+          .m20 = to_float!(m20_match.m20)
+        }
+      }
+
+      if contains(message, "买入ETF") {
+        if match(message, r'加仓(M\d+)股票\.py') {
+          strategy_match = parse_regex!(message, r'加仓(?P<strategy>M\d+)股票\.py')
+          .log_type = "加仓" + strategy_match.strategy + "股票"
+        }
+        if !exists(.log_type) {
+          .log_type = "加仓M0股票"
+        }
+        if match(message, r'买入ETF\s*=\s*(\d+\.\w+)') {
+          etf_match = parse_regex!(message, r'买入ETF\s*=\s*(?P<etf>\d+\.\w+)')
+          .buy_etf = etf_match.etf
+        }
+        if match(message, r'成分股涨数\s*=\s*(\d+)') {
+          rise_match = parse_regex!(message, r'成分股涨数\s*=\s*(?P<rise>\d+)')
+          .rise_count = to_int!(rise_match.rise)
+        }
+        if match(message, r'总成分股数\s*=\s*(\d+)') {
+          total_match = parse_regex!(message, r'总成分股数\s*=\s*(?P<total>\d+)')
+          .total_count = to_int!(total_match.total)
+        }
+        if match(message, r'最新价\s*=\s*([\d.]+)') {
+          price_match = parse_regex!(message, r'最新价\s*=\s*(?P<price>[\d.]+)')
+          .last_price = to_float!(price_match.price)
+        }
+      }
+
+      del(.message)
+      del(.file)
+      del(.source_type)
+      del(.host)
+
+  # 数据完整性校验
+  validate_data:
+    type: filter
+    inputs: ["parse_data"]
+    condition:
+      type: vrl
+      source: |
+        is_valid = false
+        if exists(.log_type) && exists(.buy_etf) {
+          if .log_type == "加仓三线" {
+            if exists(.last_price) && exists(.m5) && exists(.m10) && exists(.m20) {
+              is_valid = true
+            }
+          }
+          if starts_with(string!(.log_type), "加仓M") {
+            if exists(.rise_count) && exists(.total_count) {
+              is_valid = true
+            }
+          }
+        }
+        is_valid
+
+  # 格式化输出
+  format_output:
+    type: remap
+    inputs: ["validate_data"]
+    source: |
+      .timestamp = string!(.timestamp)
+      .log_type = string!(.log_type)
+      .buy_etf = string!(.buy_etf)
+
+sinks:
+  console_output:
+    type: console
+    inputs: ["format_output"]
+    encoding:
+      codec: json
+
+  http_output:
+    type: http
+    inputs: ["format_output"]
+    # uri: "http://192.168.1.7:5000/data"
+    uri: "https://dataview.aaa008.com/data"
+    method: post
+    encoding:
+      codec: json
+    request:
+      headers:
+        Content-Type: "application/json"
+        Secret-Key: "123456"
+      # retry_attempts: 3
+      # retry_max_duration_secs: 60
+      # retry_initial_backoff_secs: 1
+    buffer:
+      type: memory
+      max_events: 1000
+      when_full: drop_newest
+    healthcheck:
+      enabled: true

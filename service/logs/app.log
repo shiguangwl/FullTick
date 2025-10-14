@@ -1,0 +1,63 @@
+2025-10-13 18:09:58,217 - __main__ - INFO - 启动服务器...
+2025-10-13 18:09:58,217 - __main__ - INFO - HTTP API密钥: 123456
+2025-10-13 18:09:58,217 - __main__ - INFO - API端点:
+2025-10-13 18:09:58,217 - __main__ - INFO -   POST /data - 提交数据 (需要secret_key头)
+2025-10-13 18:09:58,217 - __main__ - INFO -   GET /allDataList - 获取数据 (支持since参数进行增量查询)
+2025-10-13 18:09:58,217 - __main__ - INFO - HTTP服务端点: http://0.0.0.0:5000
+2025-10-13 18:09:58,273 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://198.18.0.1:5000
+2025-10-13 18:09:58,274 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-10-13 18:09:58,285 - werkzeug - INFO -  * Restarting with watchdog (fsevents)
+2025-10-13 18:09:58,412 - data_persistence - INFO - 从 data_record.json 加载了 102 条记录
+2025-10-13 18:09:58,412 - data_handler - INFO - 成功加载 102 条数据记录
+2025-10-13 18:09:58,412 - data_persistence - INFO - 自动保存线程已启动，间隔 300 秒
+2025-10-13 18:09:58,412 - __main__ - INFO - 数据服务初始化完成
+2025-10-13 18:09:58,413 - __main__ - INFO - 启动服务器...
+2025-10-13 18:09:58,413 - __main__ - INFO - HTTP API密钥: 123456
+2025-10-13 18:09:58,413 - __main__ - INFO - API端点:
+2025-10-13 18:09:58,413 - __main__ - INFO -   POST /data - 提交数据 (需要secret_key头)
+2025-10-13 18:09:58,413 - __main__ - INFO -   GET /allDataList - 获取数据 (支持since参数进行增量查询)
+2025-10-13 18:09:58,413 - __main__ - INFO - HTTP服务端点: http://0.0.0.0:5000
+2025-10-13 18:09:58,434 - werkzeug - WARNING -  * Debugger is active!
+2025-10-13 18:09:58,450 - werkzeug - INFO -  * Debugger PIN: 109-221-950
+2025-10-13 18:10:05,778 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:05] "GET / HTTP/1.1" 200 -
+2025-10-13 18:10:06,024 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:06] "GET /allDataList HTTP/1.1" 200 -
+2025-10-13 18:10:07,673 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:07] "[36mGET / HTTP/1.1[0m" 304 -
+2025-10-13 18:10:07,889 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:07] "GET /allDataList HTTP/1.1" 200 -
+2025-10-13 18:10:10,889 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:10] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:25,133 - __main__ - INFO - 启动服务器...
+2025-10-13 18:10:25,133 - __main__ - INFO - HTTP API密钥: 123456
+2025-10-13 18:10:25,133 - __main__ - INFO - API端点:
+2025-10-13 18:10:25,133 - __main__ - INFO -   POST /data - 提交数据 (需要secret_key头)
+2025-10-13 18:10:25,133 - __main__ - INFO -   GET /allDataList - 获取数据 (支持since参数进行增量查询)
+2025-10-13 18:10:25,133 - __main__ - INFO - HTTP服务端点: http://0.0.0.0:5000
+2025-10-13 18:10:25,173 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://198.18.0.1:5000
+2025-10-13 18:10:25,173 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-10-13 18:10:25,181 - werkzeug - INFO -  * Restarting with watchdog (fsevents)
+2025-10-13 18:10:25,318 - data_persistence - INFO - 从 data_record.json 加载了 102 条记录
+2025-10-13 18:10:25,319 - data_handler - INFO - 成功加载 102 条数据记录
+2025-10-13 18:10:25,319 - data_persistence - INFO - 自动保存线程已启动，间隔 300 秒
+2025-10-13 18:10:25,319 - __main__ - INFO - 数据服务初始化完成
+2025-10-13 18:10:25,320 - __main__ - INFO - 启动服务器...
+2025-10-13 18:10:25,320 - __main__ - INFO - HTTP API密钥: 123456
+2025-10-13 18:10:25,320 - __main__ - INFO - API端点:
+2025-10-13 18:10:25,320 - __main__ - INFO -   POST /data - 提交数据 (需要secret_key头)
+2025-10-13 18:10:25,320 - __main__ - INFO -   GET /allDataList - 获取数据 (支持since参数进行增量查询)
+2025-10-13 18:10:25,320 - __main__ - INFO - HTTP服务端点: http://0.0.0.0:5000
+2025-10-13 18:10:25,340 - werkzeug - WARNING -  * Debugger is active!
+2025-10-13 18:10:25,355 - werkzeug - INFO -  * Debugger PIN: 109-221-950
+2025-10-13 18:10:25,889 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:25] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:28,888 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:28] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:31,890 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:31] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:32,474 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:32] "GET / HTTP/1.1" 200 -
+2025-10-13 18:10:32,604 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:32] "GET /allDataList HTTP/1.1" 200 -
+2025-10-13 18:10:35,605 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:35] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:38,606 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:38] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:41,606 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:41] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:44,608 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:44] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
+2025-10-13 18:10:47,609 - werkzeug - INFO - 127.0.0.1 - - [13/Oct/2025 18:10:47] "GET /allDataList?since=2025-10-11%2018:07:08 HTTP/1.1" 200 -
