@@ -10,3 +10,5 @@ __pycache__
 .vscode/
 .claude/
 client/vector/
+.ruff_cache/
+.mypy_cache/
