@@ -551,8 +551,8 @@
         // Ma均值占比 = (M5占比 + M10占比 + M20占比) / 3
         const maAvg = ((parseFloat(avgM5Percent) + parseFloat(avgM10Percent) + parseFloat(avgM20Percent)) / 3).toFixed(2);
 
-        // M5信号 (M5占比大于50%显示多,否则显示空)
-        const m5Signal = parseFloat(avgM5Percent) > 50 ? "多" : "空";
+        // M5信号(大盘趋势)
+        const m5Signal = maAvg > 50 ? "多" : "空";
         const m5SignalClass = getSignalClass(m5Signal);
 
         // 增长股数和总股数
@@ -584,11 +584,11 @@
 
         statsGrid.innerHTML = `
                 <div class="stat-card ${changedStats.has('m5Signal') ? 'highlight-stat' : ''}">
-                    <div class="stat-label">M5信号</div>
+                    <div class="stat-label">大盘趋势</div>
                     <div class="stat-value"><span style="padding: 3px 10px;border-radius: 8px;" class="${m5SignalClass}">${m5Signal}</span></div>
                 </div>
                 <div class="stat-card ${changedStats.has('avgM5Percent') ? 'highlight-stat' : ''}">
-                    <div class="stat-label">M5占比</div>
+                    <div class="stat-label">大盘指数占比</div>
                     <div class="stat-value">${avgM5Percent}%</div>
                 </div>
                 <div class="stat-card ${changedStats.has('avgM10Percent') ? 'highlight-stat' : ''}">
@@ -641,6 +641,26 @@
         table.style.display = "table";
         noDataDiv.style.display = "none";
 
+        // 计算大盘趋势(与updateStats中的逻辑保持一致)
+        const m5Data = data.filter((d) => d.m5Percent !== null && d.m5Percent !== undefined);
+        const m10Data = data.filter((d) => d.m10Percent !== null && d.m10Percent !== undefined);
+        const m20Data = data.filter((d) => d.m20Percent !== null && d.m20Percent !== undefined);
+
+        const avgM5Percent = m5Data.length > 0
+            ? ((m5Data.reduce((sum, d) => sum + d.m5Percent, 0) / m5Data.length) * 100).toFixed(2)
+            : 0;
+
+        const avgM10Percent = m10Data.length > 0
+            ? ((m10Data.reduce((sum, d) => sum + d.m10Percent, 0) / m10Data.length) * 100).toFixed(2)
+            : 0;
+
+        const avgM20Percent = m20Data.length > 0
+            ? ((m20Data.reduce((sum, d) => sum + d.m20Percent, 0) / m20Data.length) * 100).toFixed(2)
+            : 0;
+
+        const maAvg = ((parseFloat(avgM5Percent) + parseFloat(avgM10Percent) + parseFloat(avgM20Percent)) / 3).toFixed(2);
+        const m5Signal = maAvg > 50 ? "多" : "空";
+
         // 应用排序
         let sortedData;
         if (sortColumn) {
@@ -661,7 +681,10 @@
             // 获取总分数背景色类
             const getScoreClass = (score) => {
               if (score === null || score === undefined) return "";
-              return score > 3 ? "score-high" : "score-low";
+              // 当大盘趋势为"多"时,总分 >= 3 显示红色;否则总分 > 3 显示红色
+              const threshold = m5Signal === "多" ? 3 : 3;
+              const condition = m5Signal === "多" ? (score >= threshold) : (score > threshold);
+              return condition ? "score-high" : "score-low";
             };
 
             return `
