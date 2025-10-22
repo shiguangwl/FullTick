@@ -378,7 +378,7 @@
         if (value === null || value === undefined) {
           return "-";
         }
-        return value ? "true" : "false";
+        return value ? "100%" : "0%";
       }
 
       // 获取布尔值样式类
@@ -712,89 +712,107 @@
           });
         }
 
-        // 存入当前数据供下次对比
-        previousData = JSON.parse(JSON.stringify(data));
+        // 注意: 不在这里更新 previousData,由 fetchData 统一管理数据更新
       }
 
       // 获取数据
       async function fetchData() {
         try {
-          // 静默刷新：移除 loading 状态提示
-
-          // 构建请求URL，支持增量查询
+          // 构建请求URL,支持增量查询
           let url = "/allDataList";
           if (!isFirstLoad && lastUpdateTime) {
             url += `?since=${encodeURIComponent(lastUpdateTime)}`;
           }
 
+          // 发起请求
           const response = await fetch(url);
 
           if (!response.ok) {
             throw new Error(`HTTP错误: ${response.status}`);
           }
 
-          const data = await response.json();
-          // 静默刷新：移除 online 状态更新
+          const newData = await response.json();
 
-          // 如果是增量查询且有新数据，合并到现有数据中
-          if (!isFirstLoad && lastUpdateTime && data.length > 0) {
-            mergeIncrementalData(data);
+          // 准备更新的数据(先不修改previousData)
+          let updatedData;
+
+          if (!isFirstLoad && lastUpdateTime && newData.length > 0) {
+            // 增量更新: 创建previousData的副本并合并新数据
+            updatedData = JSON.parse(JSON.stringify(previousData));
+            mergeIncrementalDataToTarget(updatedData, newData);
           } else if (isFirstLoad || !lastUpdateTime) {
-            // 首次加载或全量查询
-            previousData = JSON.parse(JSON.stringify(data));
+            // 全量更新
+            updatedData = JSON.parse(JSON.stringify(newData));
             isFirstLoad = false;
+          } else {
+            // 增量查询但无新数据,保持原数据
+            updatedData = previousData;
           }
 
-          // 使用 previousData 作为当前数据（增量数据已合并）
-          const currentData = previousData;
+          // 数据验证成功后,才更新previousData
+          previousData = updatedData;
 
-          // 获取数据中的最大时间（只有在有数据时才更新）
-          if (currentData.length > 0) {
-            const maxTime = currentData.reduce((max, item) => {
-              return item.updateTime > max ? item.updateTime : max;
-            }, "1970-01-01 00:00:00");
+          // 更新UI
+          updateUIWithData(updatedData);
 
-            // 更新最后更新时间显示（截取前19个字符）
-            document.getElementById(
-              "lastUpdate"
-            ).textContent = `最后更新: ${maxTime.substring(0, 19)}`;
-
-            // 更新 lastUpdateTime 为数据中的最大时间，用于下次增量查询
-            lastUpdateTime = maxTime.substring(0, 19);
-          }
-
-          // 更新数据计数
-          document.getElementById("dataCount").textContent = currentData.length;
-
-          // 更新统计信息
-          updateStats(currentData);
-
-          // 渲染表格
-          renderTable(currentData);
+          // 更新网络状态为在线
+          updateNetworkStatus('online');
 
         } catch (error) {
           console.error("获取数据失败:", error);
           updateNetworkStatus('offline');
-          const errorDiv = document.getElementById("errorDiv");
-          errorDiv.textContent = `获取数据失败: ${error.message}`;
-          errorDiv.style.display = "block";
-          document.getElementById("loadingDiv").style.display = "none";
-          document.getElementById("dataTable").style.display = "none";
+
+          // 网络异常时,保留旧数据继续显示,不隐藏表格
+          // 只有在没有任何数据时才显示错误信息
+          if (!previousData || previousData.length === 0) {
+            const errorDiv = document.getElementById("errorDiv");
+            errorDiv.textContent = `获取数据失败: ${error.message}`;
+            errorDiv.style.display = "block";
+            document.getElementById("loadingDiv").style.display = "none";
+            document.getElementById("dataTable").style.display = "none";
+          }
+          // 如果有旧数据,什么都不做,继续显示旧数据
         }
       }
 
-      // 合并增量数据
-      function mergeIncrementalData(incrementalData) {
+      // 合并增量数据到目标数组(不直接修改previousData)
+      function mergeIncrementalDataToTarget(targetData, incrementalData) {
         incrementalData.forEach(newItem => {
-          const existingIndex = previousData.findIndex(item => item.etfCode === newItem.etfCode);
+          const existingIndex = targetData.findIndex(item => item.etfCode === newItem.etfCode);
           if (existingIndex >= 0) {
             // 更新现有数据
-            previousData[existingIndex] = newItem;
+            targetData[existingIndex] = newItem;
           } else {
             // 添加新数据
-            previousData.push(newItem);
+            targetData.push(newItem);
           }
         });
+        return targetData;
+      }
+
+      // 统一的UI更新逻辑
+      function updateUIWithData(data) {
+        // 获取数据中的最大时间(只有在有数据时才更新)
+        if (data.length > 0) {
+          const maxTime = data.reduce((max, item) => {
+            return item.updateTime > max ? item.updateTime : max;
+          }, "1970-01-01 00:00:00");
+
+          // 更新最后更新时间显示(截取前19个字符)
+          document.getElementById("lastUpdate").textContent = `最后更新: ${maxTime.substring(0, 19)}`;
+
+          // 更新 lastUpdateTime 为数据中的最大时间,用于下次增量查询
+          lastUpdateTime = maxTime.substring(0, 19);
+        }
+
+        // 更新数据计数
+        document.getElementById("dataCount").textContent = data.length;
+
+        // 更新统计信息
+        updateStats(data);
+
+        // 渲染表格
+        renderTable(data);
       }
 
       // 初始化
@@ -812,7 +830,7 @@
         fetchData();
 
         // 每3秒自动刷新（增量）
-        setInterval(fetchData, 3000);
+        setInterval(fetchData, 10000);
 
         // 每30秒强制全量刷新一次，确保数据同步
         // setInterval(() => {

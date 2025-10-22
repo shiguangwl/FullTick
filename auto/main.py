@@ -66,7 +66,7 @@ def run_scheduled_task():
         # 2. 如果窗口置顶成功，则执行鼠标回放
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 开始执行鼠标回放脚本...")
         try:
-            playback_script(2.5)
+            playback_script(2.2)
             print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ 鼠标回放脚本执行完成。")
         except Exception as e:
             print(
@@ -87,46 +87,16 @@ def setup_schedule():
     print(f"将在以下时间点，自动置顶 '{WINDOW_TITLE_KEYWORD}' 窗口并执行脚本：")
 
     # --- 设置上午的定时任务 ---
-    # 固定时间点
-    print("  - 上午 09:30 (固定)")
-    schedule.every().day.at("09:30").do(run_scheduled_task)
-
-    # 9:35 到 11:25 之间，每5分钟一次
-    display_times = []
-    for hour in range(9, 12):
-        for minute in range(0, 60, 5):
-            # 排除掉不在时间范围内的任务
-            if (hour == 9 and minute < 35) or (hour == 11 and minute > 25):
-                continue
-
-            time_str = f"{hour:02d}:{minute:02d}"
-            display_times.append(time_str)
-            schedule.every().day.at(time_str).do(run_scheduled_task)
-    print(f"  - 上午 {' 、'.join(display_times)}")
-
-    print("  - 上午 11:30 (固定)")
-    schedule.every().day.at("11:30").do(run_scheduled_task)
+    morning_times = ["09:30", "10:00", "10:10", "10:40", "11:00", "11:30"]
+    for time_str in morning_times:
+        schedule.every().day.at(time_str).do(run_scheduled_task)
+    print(f"  - 上午: {' 、'.join(morning_times)}")
 
     # --- 设置下午的定时任务 ---
-    # 固定时间点
-    print("  - 下午 13:00 (固定)")
-    schedule.every().day.at("13:00").do(run_scheduled_task)
-
-    # 13:05 到 14:55 之间，每5分钟一次
-    display_times = []
-    for hour in range(13, 15):
-        for minute in range(0, 60, 5):
-            # 排除掉第一个5分钟（因为13:00已单独设置）
-            if hour == 13 and minute == 0:
-                continue
-
-            time_str = f"{hour:02d}:{minute:02d}"
-            display_times.append(time_str)
-            schedule.every().day.at(time_str).do(run_scheduled_task)
-    print(f"  - 下午 {' 、'.join(display_times)}")
-
-    print("  - 下午 15:00 (固定)")
-    schedule.every().day.at("15:00").do(run_scheduled_task)
+    afternoon_times = ["13:00", "14:00", "14:10", "15:00"]
+    for time_str in afternoon_times:
+        schedule.every().day.at(time_str).do(run_scheduled_task)
+    print(f"  - 下午: {' 、'.join(afternoon_times)}")
 
     print("\n脚本正在后台运行，请勿关闭此窗口...")
     print("按 Ctrl+C 停止运行。")

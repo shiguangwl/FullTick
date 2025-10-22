@@ -163,22 +163,39 @@ build_and_deploy() {
         echo "📦 解压项目文件..."
         tar -xzf $PROJECT_ARCHIVE 2>/dev/null || tar -xzf $PROJECT_ARCHIVE
 
-        echo "🔄 停止旧容器..."
-        docker stop $CONTAINER_NAME 2>/dev/null || true
-        docker rm $CONTAINER_NAME 2>/dev/null || true
+        # 创建持久化目录
+        mkdir -p $REMOTE_PATH/logs
 
-        echo "🔄 删除旧镜像..."
-        docker rmi $IMAGE_NAME 2>/dev/null || true
+        echo "� 备份当前镜像（如果存在）..."
+        if docker images | grep -q "^$IMAGE_NAME "; then
+            docker tag $IMAGE_NAME:latest $IMAGE_NAME:old 2>/dev/null || true
+            echo "   已将当前镜像标记为 old"
+        else
+            echo "   未发现旧镜像，跳过备份"
+        fi
 
-        echo "🔨 构建Docker镜像..."
-        docker build -t $IMAGE_NAME . --no-cache
+        echo "🔨 构建新Docker镜像（服务继续运行中）..."
+        docker build -t $IMAGE_NAME:new . --no-cache
 
         if [ \$? -ne 0 ]; then
-            echo "❌ 镜像构建失败"
+            echo "❌ 镜像构建失败，服务未受影响"
             exit 1
         fi
 
-        echo "🚀 启动新容器..."
+        echo "✅ 新镜像构建成功！"
+        echo ""
+        echo "⚡ 开始快速切换（最小化停机时间）..."
+
+        # 记录切换开始时间
+        SWITCH_START=\$(date +%s)
+
+        # 停止旧容器
+        echo "   1️⃣ 停止旧容器..."
+        docker stop $CONTAINER_NAME 2>/dev/null || true
+        docker rm $CONTAINER_NAME 2>/dev/null || true
+
+        # 立即启动新容器
+        echo "   2️⃣ 启动新容器..."
         docker run -d \
             --name $CONTAINER_NAME \
             -p $HOST_PORT:$APP_PORT \
@@ -186,25 +203,92 @@ build_and_deploy() {
             -v $REMOTE_PATH/logs:/app/logs \
             -v $REMOTE_PATH/data_record.json:/app/data_record.json \
             --network 1panel-network \
-            $IMAGE_NAME
+            $IMAGE_NAME:new
 
-        if [ \$? -eq 0 ]; then
-            echo "✅ 容器启动成功！"
+        if [ \$? -ne 0 ]; then
+            echo "❌ 新容器启动失败！"
+
+            # 尝试回滚到旧版本
+            if docker images | grep -q "$IMAGE_NAME.*old"; then
+                echo "� 正在回滚到旧版本..."
+                docker run -d \
+                    --name $CONTAINER_NAME \
+                    -p $HOST_PORT:$APP_PORT \
+                    --restart unless-stopped \
+                    -v $REMOTE_PATH/logs:/app/logs \
+                    -v $REMOTE_PATH/data_record.json:/app/data_record.json \
+                    --network 1panel-network \
+                    $IMAGE_NAME:old
+
+                if [ \$? -eq 0 ]; then
+                    echo "✅ 已回滚到旧版本，服务恢复"
+                else
+                    echo "❌ 回滚失败，请手动检查"
+                fi
+            fi
+            exit 1
+        fi
+
+        # 等待容器启动
+        echo "   3️⃣ 验证容器状态..."
+        sleep 3
+
+        # 检查容器是否真正运行
+        if docker ps | grep -q $CONTAINER_NAME; then
+            # 计算切换时间
+            SWITCH_END=\$(date +%s)
+            SWITCH_TIME=\$((SWITCH_END - SWITCH_START))
+
+            echo "✅ 新容器运行正常！"
+            echo "⏱️  停机时间: \${SWITCH_TIME}秒"
+            echo ""
+
+            # 更新 latest 标签
+            echo "🏷️  更新镜像标签..."
+            docker tag $IMAGE_NAME:new $IMAGE_NAME:latest
+
+            # 清理旧镜像
+            echo "🧹 清理旧镜像..."
+            docker rmi $IMAGE_NAME:old 2>/dev/null || true
+            docker rmi $IMAGE_NAME:new 2>/dev/null || true
+
             echo "📍 应用地址: http://$SERVER_HOST:$HOST_PORT"
-
             echo "📊 容器状态:"
             docker ps | grep $CONTAINER_NAME
 
-            # 创建持久化目录
-            mkdir -p $REMOTE_PATH/logs
-
+            echo ""
             echo "🧹 清理临时文件..."
             cd /
             rm -rf $TEMP_PATH
 
             echo "✅ 部署完成！"
         else
-            echo "❌ 容器启动失败"
+            echo "❌ 容器启动后异常退出！"
+            echo "📋 容器日志:"
+            docker logs $CONTAINER_NAME 2>&1 | tail -20
+
+            # 尝试回滚
+            if docker images | grep -q "$IMAGE_NAME.*old"; then
+                echo ""
+                echo "🔄 正在回滚到旧版本..."
+                docker stop $CONTAINER_NAME 2>/dev/null || true
+                docker rm $CONTAINER_NAME 2>/dev/null || true
+
+                docker run -d \
+                    --name $CONTAINER_NAME \
+                    -p $HOST_PORT:$APP_PORT \
+                    --restart unless-stopped \
+                    -v $REMOTE_PATH/logs:/app/logs \
+                    -v $REMOTE_PATH/data_record.json:/app/data_record.json \
+                    --network 1panel-network \
+                    $IMAGE_NAME:old
+
+                if [ \$? -eq 0 ]; then
+                    echo "✅ 已回滚到旧版本，服务恢复"
+                else
+                    echo "❌ 回滚失败，请手动检查"
+                fi
+            fi
             exit 1
         fi
 EOF
