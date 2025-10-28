@@ -324,7 +324,7 @@
               <th class="sortable" data-column="etfCode" data-type="string">代码</th>
               <th class="sortable" data-column="etfName" data-type="string">名称</th>
               <th class="sortable" data-column="totalScore" data-type="number">总分</th>
-              <th class="sortable" data-column="m5Signal" data-type="string">M5信号</th>
+              <th class="sortable" data-column="m5Signal" data-type="string">买卖信号</th>
               <th class="sortable" data-column="greaterThanM5Price" data-type="boolean">5日</th>
               <th class="sortable" data-column="greaterThanM10Price" data-type="boolean">10日</th>
               <th class="sortable" data-column="greaterThanM20Price" data-type="boolean">20日</th>
@@ -390,7 +390,7 @@
       // 获取M5信号样式类
       function getSignalClass(signal) {
         if (!signal) return "";
-        return signal === "多" ? "signal-high" : "signal-low";
+        return signal === "买" ? "signal-high" : "signal-low";
       }
 
       // 格式化时间（截取前19个字符）
@@ -530,7 +530,7 @@
       function updateStats(data) {
         const statsGrid = document.getElementById("statsGrid");
 
-        // 过滤出不为空的数据
+        // 过滤出不为卖的数据
         const m5Data = data.filter((d) => d.m5Percent !== null && d.m5Percent !== undefined);
         const m10Data = data.filter((d) => d.m10Percent !== null && d.m10Percent !== undefined);
         const m20Data = data.filter((d) => d.m20Percent !== null && d.m20Percent !== undefined);
@@ -552,7 +552,7 @@
         const maAvg = ((parseFloat(avgM5Percent) + parseFloat(avgM10Percent) + parseFloat(avgM20Percent)) / 3).toFixed(2);
 
         // M5信号(大盘趋势)
-        const m5Signal = maAvg > 50 ? "多" : "空";
+        const m5Signal = maAvg > 50 ? "买" : "卖";
         const m5SignalClass = getSignalClass(m5Signal);
 
         // 增长股数和总股数
@@ -659,7 +659,7 @@
             : 0;
 
         const maAvg = ((parseFloat(avgM5Percent) + parseFloat(avgM10Percent) + parseFloat(avgM20Percent)) / 3).toFixed(2);
-        const m5Signal = maAvg > 50 ? "多" : "空";
+        const m5Signal = maAvg > 50 ? "买" : "卖";
 
         // 应用排序
         let sortedData;
@@ -681,11 +681,29 @@
             // 获取总分数背景色类
             const getScoreClass = (score) => {
               if (score === null || score === undefined) return "";
-              // 当大盘趋势为"多"时,总分 >= 3 显示红色;否则总分 > 3 显示红色
-              const threshold = m5Signal === "多" ? 3 : 3;
-              const condition = m5Signal === "多" ? (score >= threshold) : (score > threshold);
+              // 当大盘趋势为"买"时,总分 >= 3 显示红色;否则总分 > 3 显示红色
+              const threshold = m5Signal === "买" ? 3 : 3;
+              const condition = m5Signal === "买" ? (score >= threshold) : (score > threshold);
               return condition ? "score-high" : "score-low";
             };
+
+            // 1. 先确定总分列的颜色
+            const scoreClass = getScoreClass(item.totalScore);
+
+            // 2. 根据总分列的颜色决定新的买卖信号和其样式
+            let derivedM5Signal;
+            let derivedSignalClass;
+
+            if (scoreClass === 'score-high') { // 如果总分是红色
+                derivedM5Signal = '买';
+                derivedSignalClass = 'signal-high'; // 红色
+            } else if (scoreClass === 'score-low') { // 如果总分是绿色
+                derivedM5Signal = '卖';
+                derivedSignalClass = 'signal-low'; // 绿色
+            } else { // 其他情况 (例如没有分数)
+                derivedM5Signal = '-';
+                derivedSignalClass = '';
+            }
 
             return `
                     <tr class="${rowClass}">
@@ -694,8 +712,8 @@
                         )}</td>
                         <td class="code-cell">${item.etfCode || "-"}</td>
                         <td>${item.etfName || "-"}</td>
-                        <td class="${getScoreClass(item.totalScore)}">${item.totalScore || "0"}</td>
-                        <td class="${getSignalClass(item.m5Signal)}">${item.m5Signal || "-"}</td>
+                        <td class="${scoreClass}">${item.totalScore || "0"}</td>
+                        <td class="${derivedSignalClass}">${derivedM5Signal}</td>
                         <td class="${getBooleanClass(
                           item.greaterThanM5Price
                         )}">${formatBoolean(item.greaterThanM5Price)}</td>
@@ -734,9 +752,8 @@
             tableContainer.scrollTop = scrollTop;
           });
         }
-
-        // 注意: 不在这里更新 previousData,由 fetchData 统一管理数据更新
       }
+
 
       // 获取数据
       async function fetchData() {
